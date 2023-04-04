@@ -15,7 +15,9 @@ class Conf:
             'budget': '一键起量预算',
             'title': '创意文案',
             'count': '每个账号创建广告的数量',
-            'material_count': '单个广告素材的数量'
+            'material_count': '单个广告素材的数量',
+            'material_type': '素材类型',
+            'position': '投放位置',
         }
     
     def getOfficials(self):
@@ -34,7 +36,8 @@ class Conf:
         
         return officials
     
-    def getConfigs(self):
+    def checkConfig(self) -> dict:
+        """检查配置项"""
         configs = {}
         for name in self.conf.options('conf'):
             value = self.conf.get('conf', name)
@@ -42,16 +45,33 @@ class Conf:
                 raise WxError(self.rules[name] + '配置错误')
             configs[name] = self.getOfficials() if name == 'officials' else value
         
+        # 拼接公众号
         officials = {}
         for name in configs['officials']:
             officials[name] = {
                 'count': int(configs['count']),  # 创建计划的数量
-                'material': True,  # 是否上传素材、
+                'material': True,  # 是否上传素材
             }
         configs['officials'] = officials
         configs['material_num'] = len(os.listdir('conf/images'))
         
+        # 获取投放位置
+        position = configs['position']
+        if '不限' in position:
+            configs['position'] = '不限'
+        else:
+            configs['position'] = position.split(',')
+        
         return configs
+    
+    def getConfigs(self):
+        """读取配置项"""
+        confs = self.checkConfig()
+        for name in self.rules:
+            if name not in confs.keys():
+                raise WxError(f'[{self.rules[name]}]配置错误')
+        
+        return confs
     
     def checkDir(self):
         if not os.path.exists(self.path):

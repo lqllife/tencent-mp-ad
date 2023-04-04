@@ -49,7 +49,7 @@ class Play:
             self.noViewPort = False
             args = None
         
-        self.browser = play.chromium.launch(headless=headless, args=args, slow_mo=300,  executable_path=get_executable_path())
+        self.browser = play.chromium.launch(headless=headless, args=args, slow_mo=300, executable_path=get_executable_path())
         self.context = self.getContext()
         self.page = self.context.new_page()
         
@@ -144,6 +144,7 @@ class Play:
     
     def choseAccount(self, name: str):
         """选择账户"""
+        self.page.wait_for_load_state()
         self.page.get_by_placeholder('请输入广告主名称').click()
         self.page.get_by_placeholder('请输入广告主名称').fill(name)
         self.page.locator('i[class="spaui-icon-viewer spaui-icon"]').nth(1).click()
@@ -155,6 +156,80 @@ class Play:
         with self.page.expect_popup() as mpPageInfo:
             self.page.get_by_role('link', name='公众平台投放入口').click()
         self.mpPage = mpPageInfo.value
+    
+    def uploadImages(self):
+        """上传素材图片"""
+        MaterialPath = 'images' if self.isImageMaterial() else 'videos'
+        MaterialPath = f'conf/{MaterialPath}'
+        fileNames = []
+        files = os.listdir(MaterialPath)
+        for file in files:
+            fileNames.append(os.path.join(MaterialPath, file))
+        fileChunk = splitList(fileNames, 10)
+        self.mpPage.get_by_role('link', name='资产').click()
+        try:
+            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role('button', name='我知道了').click(timeout=10000)
+        except TimeoutError:
+            pass
+        with self.mpPage.expect_popup() as materialPageInfo:
+            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role("link", name='我的素材 整合广告投放使用的创意素材，进行素材的集中管理和维护').click()
+        materialPage = materialPageInfo.value
+        materialPage.wait_for_load_state()
+        try:
+            if self.isImageMaterial():
+                materialPage.frame_locator('iframe[title="myMaterialIframe"]').locator('a').filter(has_text='图片').click()
+        except TimeoutError:
+            materialPage.reload()
+        for filesArr in fileChunk:
+            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='上传素材').click()
+            with materialPage.expect_file_chooser() as fc_info:
+                materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_text('点击上传').click()
+            file_chooser = fc_info.value
+            file_chooser.set_files(filesArr)
+            materialPage.wait_for_load_state()
+            # expect(materialPage.locator('.loading-text')).to_be_hidden(timeout=10000)
+            # materialPage.wait_for_selector('', state='hidden', timeout=10000).is_visible()
+            materialPage.wait_for_timeout(8000)
+            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='确定').click()
+            materialPage.wait_for_timeout(2000)
+        materialPage.wait_for_timeout(3000)
+        materialPage.close()
+    
+    def selectMaterila(self, no: int) -> bool:
+        """选择素材"""
+        try:
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('div:nth-child(' + str(no) + ') > .figure-box > .relative > img').click(timeout=5000)
+            return True
+        except TimeoutError:
+            return False
+    
+    def setMaterial(self):
+        if self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.is_checked():
+            self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.click()
+        if self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.is_checked():
+            self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.click()
+        self.adqPage.get_by_role('button', name='图片/视频').click()
+        # 随机选择图片
+        btnName = '我的图片' if self.isImageMaterial() else '我的视频'
+        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
+        try:
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').first.wait_for(timeout=20000)
+        except TimeoutError:
+            pass
+        if self.materialCount == 0:
+            self.materialCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
+        # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
+        selectCount = int(self.config['material_count'])
+        selectedNum = 0
+        randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount)
+        print(f'素材总数：{self.materialCount}, 随机：{randArr}')
+        for no in randArr:
+            if self.selectMaterila(no):
+                selectedNum += 1
+                if selectedNum >= selectCount:
+                    break
+        self.adqPage.wait_for_load_state()
+        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
     
     def openPlanPage(self, create=True):
         """打开新建广告页面"""
@@ -214,11 +289,16 @@ class Play:
         self.adqPage.close()
     
     def closePageButton(self, isMp=True):
+        """关闭 我知道了 按钮"""
         try:
             page = self.mpPage if isMp else self.adqPage
             page.get_by_role('dialog').get_by_role('button', name='我知道了').click(timeout=6000)
         except TimeoutError:
             pass
+    
+    def isImageMaterial(self) -> bool:
+        """是不是上传图片素材"""
+        return self.config['material_type'] == '1'
     
     def publicSteps(self):
         """公共提交步骤"""
@@ -230,14 +310,14 @@ class Play:
         if self.isCreate:
             self.adqPage.get_by_role('button', name=re.compile('微信公众号与小程序')).click()
         # 更多选项
-        try:
-            self.adqPage.get_by_role('button', name='更多选项').click(timeout=1500)
-        except TimeoutError:
-            pass
-        self.adqPage.locator('#target_item_wechat_position').get_by_role('button', name='自定义').click()
-        self.adqPage.get_by_text('公众号文章底部').click()
-        self.adqPage.get_by_text('公众号文章中部').click()
-        self.adqPage.get_by_text('订阅号消息列表').click()
+        if self.config['position'] != '不限':
+            try:
+                self.adqPage.get_by_role('button', name='更多选项').click(timeout=1500)
+            except TimeoutError:
+                pass
+            self.adqPage.locator('#target_item_wechat_position').get_by_role('button', name='自定义').click()
+            for p in self.config['position']:
+                self.adqPage.get_by_text(f'{p}').click()
         self.adqPage.get_by_role('button', name='按区域').click()
         self.adqPage.get_by_text('近期到访').click()
         self.adqPage.get_by_text('常住地', exact=True).click()
@@ -265,7 +345,8 @@ class Play:
         else:
             dayDom.nth(0).click()
         # 出价方式
-        self.adqPage.get_by_role('button', name='oCPC').click()
+        if self.isImageMaterial():
+            self.adqPage.get_by_role('button', name='oCPC').click()
         self.adqPage.locator('.selection-single').nth(2 if self.isCreate else 3).click()
         self.adqPage.locator('.selection-info').nth(0).click()
         self.adqPage.get_by_role('button', name='优先拿量').click()
@@ -284,76 +365,6 @@ class Play:
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 3).fill(self.config['title'])
         self.adqPage.get_by_role('button', name='微信公众号详情').click()
         self.submit()
-    
-    def uploadImages(self):
-        """上传素材图片"""
-        fileNames = []
-        files = os.listdir('conf/images')
-        for file in files:
-            fileNames.append(os.path.join('conf/images', file))
-        fileChunk = splitList(fileNames, 10)
-        self.mpPage.get_by_role('link', name='资产').click()
-        try:
-            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role('button', name='我知道了').click(timeout=10000)
-        except TimeoutError:
-            pass
-        with self.mpPage.expect_popup() as materialPageInfo:
-            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role("link", name='我的素材 整合广告投放使用的创意素材，进行素材的集中管理和维护').click()
-        materialPage = materialPageInfo.value
-        materialPage.wait_for_load_state()
-        try:
-            materialPage.frame_locator('iframe[title="myMaterialIframe"]').locator('a').filter(has_text='图片').click()
-        except TimeoutError:
-            materialPage.reload()
-        for filesArr in fileChunk:
-            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='上传素材').click()
-            with materialPage.expect_file_chooser() as fc_info:
-                materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_text('点击上传').click()
-            file_chooser = fc_info.value
-            file_chooser.set_files(filesArr)
-            materialPage.wait_for_load_state()
-            # expect(materialPage.locator('.loading-text')).to_be_hidden(timeout=10000)
-            # materialPage.wait_for_selector('', state='hidden', timeout=10000).is_visible()
-            materialPage.wait_for_timeout(8000)
-            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='确定').click()
-            materialPage.wait_for_timeout(2000)
-        materialPage.wait_for_timeout(3000)
-        materialPage.close()
-    
-    def selectMaterila(self, no: int) -> bool:
-        """选择素材"""
-        try:
-            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('div:nth-child(' + str(no) + ') > .figure-box > .relative > img').click(timeout=5000)
-            return True
-        except TimeoutError:
-            return False
-    
-    def setMaterial(self):
-        if self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.is_checked():
-            self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.click()
-        if self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.is_checked():
-            self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.click()
-        self.adqPage.get_by_role('button', name='图片/视频').click()
-        # 随机选择图片
-        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('我的图片').click()
-        try:
-            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').first.wait_for(timeout=20000)
-        except TimeoutError:
-            pass
-        if self.materialCount == 0:
-            self.materialCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
-        # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
-        selectCount = int(self.config['material_count'])
-        selectedNum = 0
-        randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount)
-        print(f'素材总数：{self.materialCount}, 随机：{randArr}')
-        for no in randArr:
-            if self.selectMaterila(no):
-                selectedNum += 1
-                if selectedNum >= selectCount:
-                    break
-        self.adqPage.wait_for_load_state()
-        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
     
     def submit(self, close=True):
         """提交计划"""
