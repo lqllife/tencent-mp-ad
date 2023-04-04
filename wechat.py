@@ -189,7 +189,7 @@ class Play:
             materialPage.wait_for_load_state()
             # expect(materialPage.locator('.loading-text')).to_be_hidden(timeout=10000)
             # materialPage.wait_for_selector('', state='hidden', timeout=10000).is_visible()
-            materialPage.wait_for_timeout(8000)
+            materialPage.wait_for_timeout(8000 * (1 if self.isImageMaterial() else 2))
             materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='确定').click()
             materialPage.wait_for_timeout(2000)
         materialPage.wait_for_timeout(3000)
