@@ -21,16 +21,7 @@ except WxError as error:
 with sync_playwright() as playwright:
     play = Play(playwright, config, True)
     play.fastTest = True
-    play.login()
-    play.cancleMobileAlert()
-    play.choseAccount('捗读')
-    # play.openPlanPage(False)
-    play.openPlanPage()
-    # play.adqPage = play.page
-    play.createPlanByNew()
-    # play.createPlanByCurrent(play.page)
-    # play.createPlanByCopy()
-    # play.closeAdqPage()
-    # play.close()
+    play.login(30976118)
+    play.createPlan()
     time.sleep(10000)
     log.info('程序退出\n')
