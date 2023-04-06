@@ -54,7 +54,6 @@ class Play:
         self.page = self.context.new_page()
         
         self.fastTest = False
-        self.isCreate = True
         self.materialNo = 0
     
     def close(self):
@@ -207,7 +206,6 @@ class Play:
     
     def createPlan(self):
         """新建推广计划"""
-        self.isCreate = True
         self.closePageButton(False)
         self.adqPage.get_by_text('新建推广计划').click()
         self.adqPage.locator('#order_container_campaign').locator('button[data-hottag-content="unfold"]').click()
@@ -215,19 +213,6 @@ class Play:
         self.adqPage.locator('#order_container_campaign').get_by_role('button', name='加速投放').click()
         self.adqPage.locator('#order_container_campaign').get_by_placeholder('请输入推广计划名称').click()
         self.adqPage.locator('#order_container_campaign').get_by_placeholder('请输入推广计划名称').fill('%s-%s-%s' % ('推广计划', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), makeRandStr()))
-        self.publicSteps()
-    
-    def createPlanByCurrent(self):
-        """选择已有推广计划"""
-        self.adqPage.wait_for_timeout(5000)
-        self.closePageButton(False)
-        try:
-            self.adqPage.get_by_role('button', name='创建新广告').click(timeout=10000)
-        except TimeoutError:
-            pass
-        self.isCreate = False
-        self.adqPage.locator('.selection-single').nth(0).click()
-        self.adqPage.locator('.selection-info').nth(0).click()
         self.publicSteps()
     
     def copyPlan(self):
@@ -272,8 +257,7 @@ class Play:
         self.adqPage.wait_for_timeout(6000)
         self.adqPage.get_by_role('button', name='不使用').click()
         # 从已有推广计划创建时不需要点此
-        if self.isCreate:
-            self.adqPage.get_by_role('button', name=re.compile('微信公众号与小程序')).click()
+        self.adqPage.get_by_role('button', name=re.compile('微信公众号与小程序')).click()
         # 更多选项
         if self.config['position'] != '不限':
             try:
@@ -296,7 +280,7 @@ class Play:
         self.adqPage.get_by_role('button', name=re.compile(r'导入\s\d+\s个区域')).click()
         # 年龄
         self.adqPage.locator('[data-hottag="Click.Function.Phoenix.TargetItem.age.customize"]').click()
-        self.adqPage.locator('.selection-single').nth(0 if self.isCreate else 1).click()
+        self.adqPage.locator('.selection-single').nth(0).click()
         self.adqPage.locator('.selection-info').nth(13).click()
         self.adqPage.get_by_role('button', name='男').click()
         # 选择投放日期
@@ -312,10 +296,10 @@ class Play:
         # 出价方式
         if self.isImageMaterial():
             self.adqPage.get_by_role('button', name='oCPC').click()
-        self.adqPage.locator('.selection-single').nth(2 if self.isCreate else 3).click()
+        self.adqPage.locator('.selection-single').nth(2).click()
         self.adqPage.locator('.selection-info').nth(0).click()
         self.adqPage.get_by_role('button', name='优先拿量').click()
-        inputNo = 1 if self.isCreate else 0
+        inputNo = 1
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).click()
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).fill(str(self.config['price']))
         self.adqPage.locator('[data-hottag="Click.Function.Phoenix.CostGroup.AutoAcquisition.SwitchBtn"]').click()
