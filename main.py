@@ -14,8 +14,7 @@ class Main:
     failNum = 0
     play = None
     
-    def __init__(self, needUpload=True):
-        self.needUpload = needUpload
+    def __init__(self):
         logPath = getLogFilePath()
         self.log = logError(logPath, '检查')
         self.log.info('------------------------------------------------------------')
@@ -57,23 +56,17 @@ class Main:
             try:
                 self.log.info(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划，开始查找账户')
                 self.play.choseAccount(name)
-                if self.needUpload and self.officials[name]['material']:
-                    self.log.info(f'公众号[{name}]账户查找成功，上传素材，处理中...')
-                    self.play.uploadImages()
-                    self.officials[name]['material'] = False
-                    self.log.info(f'公众号[{name}]素材上传成功，开始创建计划')
-                else:
-                    self.log.info(f'公众号[{name}]账户查找成功，开始创建计划...')
+                self.log.info(f'公众号[{name}]账户查找成功，开始创建计划...')
                 for i in range(count):
                     try:
                         self.log.info(f'公众号[{name}]第[{i + 1}/{count}]个计划创建中...')
                         if i == 0:
                             self.play.openPlanPage()
-                            self.play.createPlanByNew()
+                            self.play.createPlan()
                             self.play.closeAdqPage()
                             self.play.reloadMpPge()
                         else:
-                            self.play.createPlanByCopy()
+                            self.play.copyPlan()
                         self.log.info(f'公众号[{name}]第[{i + 1}/{count}]个计划创建成功')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
@@ -124,6 +117,6 @@ class Main:
 
 
 with sync_playwright() as playwright:
-    main = Main(needUpload=True)
+    main = Main()
     main.checkLogin()
     main.run()

@@ -64,16 +64,12 @@ class Play:
     
     def closeAdqPage(self, withMpPage=False):
         """关闭公众号页面"""
-        if self.fastTest:
-            self.page.close()
-        else:
-            # 防止提素材时报错
-            if self.adqPage is not None:
-                self.adqPage.close()
-                self.adqPage = None
-            if withMpPage and self.mpPage is not None:
-                self.mpPage.close()
-                self.mpPage = None
+        if self.adqPage is not None:
+            self.adqPage.close()
+            self.adqPage = None
+        if withMpPage and self.mpPage is not None:
+            self.mpPage.close()
+            self.mpPage = None
     
     def reloadMpPge(self):
         """刷新mp页面"""
@@ -96,12 +92,12 @@ class Play:
         self.page.goto('https://e.qq.com/ads/')
         return self.isDomExist('link', name='登录')
     
-    def login(self):
+    def login(self, accountId=0):
         """执行登录"""
-        # if self.fastTest:
-        #     """在已经登录和选好公众号的前提下"""
-        #     self.page.goto('https://ad.qq.com/atlas/30206572/ad/create?from=mp')
-        #     return
+        if self.fastTest:
+            self.page.goto(f'https://ad.qq.com/atlas/{accountId}/ad/create?from=mp')
+            self.adqPage = self.page
+            return
         
         self.page.goto('https://e.qq.com/ads/')
         if self.isDomExist('link', '登录'):
@@ -157,44 +153,6 @@ class Play:
             self.page.get_by_role('link', name='公众平台投放入口').click()
         self.mpPage = mpPageInfo.value
     
-    def uploadImages(self):
-        """上传素材图片"""
-        MaterialPath = 'images' if self.isImageMaterial() else 'videos'
-        MaterialPath = f'conf/{MaterialPath}'
-        fileNames = []
-        files = os.listdir(MaterialPath)
-        for file in files:
-            fileNames.append(os.path.join(MaterialPath, file))
-        fileChunk = splitList(fileNames, 10)
-        self.mpPage.get_by_role('link', name='资产').click()
-        try:
-            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role('button', name='我知道了').click(timeout=10000)
-        except TimeoutError:
-            pass
-        with self.mpPage.expect_popup() as materialPageInfo:
-            self.mpPage.frame_locator('iframe[title="腾讯广告 - 资产"]').get_by_role("link", name='我的素材 整合广告投放使用的创意素材，进行素材的集中管理和维护').click()
-        materialPage = materialPageInfo.value
-        materialPage.wait_for_load_state()
-        try:
-            if self.isImageMaterial():
-                materialPage.frame_locator('iframe[title="myMaterialIframe"]').locator('a').filter(has_text='图片').click()
-        except TimeoutError:
-            materialPage.reload()
-        for filesArr in fileChunk:
-            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='上传素材').click()
-            with materialPage.expect_file_chooser() as fc_info:
-                materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_text('点击上传').click()
-            file_chooser = fc_info.value
-            file_chooser.set_files(filesArr)
-            materialPage.wait_for_load_state()
-            # expect(materialPage.locator('.loading-text')).to_be_hidden(timeout=10000)
-            # materialPage.wait_for_selector('', state='hidden', timeout=10000).is_visible()
-            materialPage.wait_for_timeout(8000 * (1 if self.isImageMaterial() else 2))
-            materialPage.frame_locator('iframe[title="myMaterialIframe"]').get_by_role('button', name='确定').click()
-            materialPage.wait_for_timeout(2000)
-        materialPage.wait_for_timeout(3000)
-        materialPage.close()
-    
     def selectMaterila(self, no: int) -> bool:
         """选择素材"""
         try:
@@ -217,6 +175,13 @@ class Play:
         except TimeoutError:
             pass
         if self.materialCount == 0:
+            # 没有素材时，上传素材
+            realCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
+            _, _, lists = self.getMaterialList()
+            if realCount < len(lists):
+                print('需要上传素材')
+                self.uploadMaterials()
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
             self.materialCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
         selectCount = int(self.config['material_count'])
@@ -240,7 +205,7 @@ class Play:
                 self.mpPage.get_by_role('button', name='新建广告').click()
             self.adqPage = adqPageInfo.value
     
-    def createPlanByNew(self):
+    def createPlan(self):
         """新建推广计划"""
         self.isCreate = True
         self.closePageButton(False)
@@ -265,7 +230,7 @@ class Play:
         self.adqPage.locator('.selection-info').nth(0).click()
         self.publicSteps()
     
-    def createPlanByCopy(self):
+    def copyPlan(self):
         """复制现有计划"""
         self.closePageButton()
         try:
@@ -365,6 +330,36 @@ class Play:
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 3).fill(self.config['title'])
         self.adqPage.get_by_role('button', name='微信公众号详情').click()
         self.submit()
+    
+    def uploadMaterials(self):
+        """上传素材"""
+        # 点击本地上传
+        self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('a[data-hottag="MaterialLibrary.DynamicCreativeMaterialDialog.Click.MaterialTabClick.PageTab1"]').click()
+        MaterialPath, fileNames, files = self.getMaterialList()
+        for file in files:
+            fileNames.append(os.path.join(MaterialPath, file))
+        fileChunk = splitList(fileNames, 10)
+        for filesArr in fileChunk:
+            with self.adqPage.expect_file_chooser() as fc_info:
+                self.adqPage.frame_locator(".spaui-drawer-body > iframe").get_by_text('点击或拖拽上传').click()
+            file_chooser = fc_info.value
+            file_chooser.set_files(filesArr)
+            self.adqPage.wait_for_load_state()
+            self.adqPage.wait_for_timeout(8000 * (1 if self.isImageMaterial() else 2))
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
+            self.adqPage.wait_for_timeout(2000)
+            self.adqPage.get_by_role('button', name='清空').click()
+            self.adqPage.get_by_role('button', name='确定').click()
+            self.adqPage.get_by_role('button', name='图片/视频').click()
+        self.adqPage.wait_for_timeout(3000)
+    
+    def getMaterialList(self):
+        """获取素材文件的数组"""
+        MaterialPath = 'images' if self.isImageMaterial() else 'videos'
+        MaterialPath = f'conf/{MaterialPath}'
+        fileNames = []
+        files = os.listdir(MaterialPath)
+        return MaterialPath, fileNames, files
     
     def submit(self, close=True):
         """提交计划"""
