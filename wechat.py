@@ -139,11 +139,11 @@ class Play:
     
     def choseAccount(self, name: str):
         """选择账户"""
-        self.page.wait_for_load_state()
+        self.page.wait_for_timeout(3000)
         self.page.get_by_placeholder('请输入广告主名称').click()
         self.page.get_by_placeholder('请输入广告主名称').fill(name)
         self.page.locator('i[class="spaui-icon-viewer spaui-icon"]').nth(1).click()
-        self.page.wait_for_load_state()
+        self.page.wait_for_timeout(3000)
         if not self.isDomExist(f'tr:has-text("{name}")', timeout=10000):
             raise WxError(f'未找到公众号[{name}]', 1)
         
@@ -342,12 +342,25 @@ class Play:
                 self.adqPage.frame_locator(".spaui-drawer-body > iframe").get_by_text('点击或拖拽上传').click()
             file_chooser = fc_info.value
             file_chooser.set_files(filesArr)
-            self.adqPage.wait_for_load_state()
-            self.adqPage.wait_for_timeout(8000 * (1 if self.isImageMaterial() else 2))
-            self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
-            self.adqPage.wait_for_timeout(2000)
+            timeout = (2000 if len(filesArr) < 10 else 20000) + 1500 * len(filesArr) * (1 if self.isImageMaterial() else 2)
+            self.adqPage.wait_for_timeout(timeout)
+            # 有需要重试的素材直接跳过，测试发现无论重试多少次，都是不会成功
+            if self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count() != 0:
+                self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='取消').click()
+                self.adqPage.get_by_role('button', name='图片/视频').click()
+                continue
+            # 重试
+            # while self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count() != 0:
+            #     retryCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count()
+            #     print('重试', retryCount)
+            #     for i in range(retryCount):
+            #         self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').nth(i).click()
+            #     self.adqPage.wait_for_timeout(3000)
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click(timeout=timeout)
+            self.adqPage.wait_for_timeout(1500)
             self.adqPage.get_by_role('button', name='清空').click()
             self.adqPage.get_by_role('button', name='确定').click()
+            self.adqPage.wait_for_timeout(4000)
             self.adqPage.get_by_role('button', name='图片/视频').click()
         self.adqPage.wait_for_timeout(3000)
     
