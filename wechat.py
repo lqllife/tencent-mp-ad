@@ -144,7 +144,7 @@ class Play:
         self.page.get_by_placeholder('请输入广告主名称').fill(name)
         self.page.locator('i[class="spaui-icon-viewer spaui-icon"]').nth(1).click()
         self.page.wait_for_load_state()
-        if not self.isDomExist(f'tr:has-text("{name}")', timeout=20000):
+        if not self.isDomExist(f'tr:has-text("{name}")', timeout=10000):
             raise WxError(f'未找到公众号[{name}]', 1)
         
         self.materialCount = 0
@@ -250,6 +250,14 @@ class Play:
         """是不是上传图片素材"""
         return self.config['material_type'] == '1'
     
+    @staticmethod
+    def getAgeIndex(val: int, inc=True):
+        """返回年龄的下标"""
+        r = range(18, 67)
+        idx = r.index(val)
+        
+        return idx + 1 if inc else idx
+    
     def publicSteps(self):
         """公共提交步骤"""
         self.adqPage.get_by_role('button', name='下一步').click()
@@ -280,8 +288,14 @@ class Play:
         self.adqPage.get_by_role('button', name=re.compile(r'导入\s\d+\s个区域')).click()
         # 年龄
         self.adqPage.locator('[data-hottag="Click.Function.Phoenix.TargetItem.age.customize"]').click()
+        # 年龄 - 左侧
         self.adqPage.locator('.selection-single').nth(0).click()
-        self.adqPage.locator('.selection-info').nth(13).click()
+        idx = self.getAgeIndex(int(self.config['age'][0]))
+        self.adqPage.locator('.selection-info').nth(idx).click()
+        # 年龄 - 右侧
+        self.adqPage.locator('.selection-single').nth(1).click()
+        idx = self.getAgeIndex(int(self.config['age'][1]), False)
+        self.adqPage.locator('.selection-info').nth(idx).click()
         self.adqPage.get_by_role('button', name='男').click()
         # 选择投放日期
         [monthNow, now, monthAfter, dayAfter] = getNewDate()

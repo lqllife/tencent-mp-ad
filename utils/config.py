@@ -18,6 +18,7 @@ class Conf:
             'material_count': '单个广告素材的数量',
             'material_type': '素材类型',
             'position': '投放位置',
+            'age': '年龄',
         }
     
     def getOfficials(self):
@@ -61,6 +62,9 @@ class Conf:
             configs['position'] = '不限'
         else:
             configs['position'] = position.split(',')
+        
+        # 年龄
+        configs['age'] = configs['age'].split(',')
         
         return configs
     
