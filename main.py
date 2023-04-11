@@ -18,28 +18,28 @@ class Main:
         logPath = getLogFilePath()
         self.log = logError(logPath, '检查')
         self.log.info('------------------------------------------------------------')
-        self.log.info('程序启动，检查配置中...')
+        print('程序启动，检查配置中...')
         confs = Conf('conf/config.ini')
         self.config = confs.getConfigs()
-        self.log.info('配置项无误')
+        print('配置项无误')
         self.officials = self.config['officials']
     
     def checkLogin(self):
         """是否需要登录"""
         self.log.info('检查是否需要登录...')
         if not os.path.exists('auth/auth.json'):
-            self.log.info('请扫码登录')
+            print('请扫码登录')
             p = Play(playwright, {}, True)
             p.login()
             p.close()
-            self.log.info('登录成功，开始处理...')
+            print('登录成功，开始处理...')
         else:
             p = Play(playwright, {}, True)
             if p.checkLogin():
-                self.log.info('请扫码登录')
+                print('请扫码登录')
                 p.login()
             else:
-                self.log.info('无需登录，开始处理...')
+                print('无需登录，开始处理...')
             p.close()
     
     def startPlan(self):
@@ -54,12 +54,10 @@ class Main:
             if count == 0:
                 continue
             try:
-                self.log.info(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划，开始查找账户')
+                print(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划')
                 self.play.choseAccount(name)
-                self.log.info(f'公众号[{name}]账户查找成功，开始创建计划...')
                 for i in range(count):
                     try:
-                        self.log.info(f'公众号[{name}]第[{i + 1}/{count}]个计划创建中...')
                         if i == 0:
                             self.play.openPlanPage()
                             self.play.createPlan()
@@ -67,7 +65,7 @@ class Main:
                             self.play.reloadMpPge()
                         else:
                             self.play.copyPlan()
-                        self.log.info(f'公众号[{name}]第[{i + 1}/{count}]个计划创建成功')
+                        print(f'已完成 {i + 1}')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
