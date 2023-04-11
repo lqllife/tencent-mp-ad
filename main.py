@@ -75,7 +75,10 @@ class Main:
                         self.play.closeAdqPage()
                         if i == 0:
                             self.play.openPlanPage()
-                        continue
+                        if isinstance(err, WxError) and err.errorcode == 1:
+                            break
+                        else:
+                            continue
                 self.play.closeAdqPage(True)
                 self.log.info(f'公众号[{name}]的{count}个计划创建成功')
                 officialIndex += 1

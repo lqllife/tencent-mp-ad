@@ -178,11 +178,13 @@ class Play:
             realCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
             _, _, lists = self.getMaterialList()
             if realCount < len(lists):
-                print('需要上传素材')
+                print('需要上传素材', realCount, len(lists))
                 self.uploadMaterials()
             self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
             self.materialCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
+        if self.materialCount == 0:
+            raise WxError('素材上传失败', 1)
         selectCount = int(self.config['material_count'])
         selectedNum = 0
         randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount)
@@ -224,7 +226,7 @@ class Play:
                     self.mpPage.get_by_role('button', name='复制').first.click()
                 self.adqPage = mpPageInfo.value
         except TimeoutError:
-            raise WxError('无法复制，公众号没有广告')
+            raise WxError('无法复制，公众号没有广告', 1)
         self.closePageButton(False)
         self.adqPage.wait_for_load_state()
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').click()
@@ -342,13 +344,12 @@ class Play:
                 self.adqPage.frame_locator(".spaui-drawer-body > iframe").get_by_text('点击或拖拽上传').click()
             file_chooser = fc_info.value
             file_chooser.set_files(filesArr)
-            timeout = (2000 if len(filesArr) < 10 else 20000) + 1500 * len(filesArr) * (1 if self.isImageMaterial() else 2)
+            timeout = (2000 if len(filesArr) < 10 else 20000) + 1500 * len(filesArr) * (1 if self.isImageMaterial() else 5)
             self.adqPage.wait_for_timeout(timeout)
             # 有需要重试的素材直接跳过，测试发现无论重试多少次，都是不会成功
             if self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count() != 0:
-                self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='取消').click()
-                self.adqPage.get_by_role('button', name='图片/视频').click()
-                continue
+                self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='取消', exact=True).click()
+                break
             # 重试
             # while self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count() != 0:
             #     retryCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text('重试').count()
