@@ -3,11 +3,11 @@ import random
 import logging
 
 
-def makeRandArr(length, count):
+def makeRandArr(length, count, start=0):
     """生成随机字符串数组"""
     arr = list()
     while len(arr) != count:
-        rand = random.randint(1, length)
+        rand = random.randint(1, length - start)
         if arr.count(rand) == 0:
             arr.append(rand)
     

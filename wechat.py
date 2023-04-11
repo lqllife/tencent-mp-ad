@@ -187,7 +187,7 @@ class Play:
             raise WxError('素材上传失败', 1)
         selectCount = int(self.config['material_count'])
         selectedNum = 0
-        randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount)
+        randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount, int(self.config['material_start']))
         print(f'素材总数：{self.materialCount}, 随机：{randArr}')
         for no in randArr:
             if self.selectMaterila(no):
