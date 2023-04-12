@@ -18,7 +18,7 @@ class Main:
     def __init__(self):
         logPath = getLogFilePath()
         self.log = logError(logPath, '检查')
-        self.log.info('------------------------------------------------------------')
+        self.printAndLog('------------------------------------------------------------')
         print('程序启动，检查配置中...')
         confs = Conf('conf/config.ini')
         self.config = confs.getConfigs()
@@ -27,7 +27,7 @@ class Main:
     
     def checkLogin(self):
         """是否需要登录"""
-        self.log.info('检查是否需要登录...')
+        self.printAndLog('检查是否需要登录...')
         if not os.path.exists('auth/auth.json'):
             print('请扫码登录')
             p = Play(playwright, {}, True)
@@ -74,6 +74,7 @@ class Main:
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
+                        print(f'出现错误，将在稍后重试，耗时: {self.getTimeDiff()}s')
                         self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}，耗时: {self.getTimeDiff()}s')
                         self.play.closeAdqPage()
                         if i == 0:
@@ -84,15 +85,17 @@ class Main:
                             continue
                 self.play.closeAdqPage(True)
                 if i == count - 1:
-                    self.log.info(f'公众号[{name}]的{count}个计划创建成功')
+                    self.printAndLog(f'公众号[{name}]的{count}个计划创建成功')
                 officialIndex += 1
             except (TimeoutError, Error) as err:
                 officialIndex += 1
+                print('出现错误，将在稍后重试')
                 self.log.error(f'公众号[{name}]发生错误：{err}')
                 self.play.closeAdqPage(True)
                 continue
             except WxError as err:
                 officialIndex += 1
+                print('出现错误，将在稍后重试')
                 self.log.error(f'公众号[{name}]出现错误：{err}')
                 if err.errorcode == 1:
                     self.officials[name]['count'] = 0
@@ -116,17 +119,22 @@ class Main:
         officialStr = ''
         for nameStr in self.officials:
             officialStr += nameStr + ','
-        self.log.info(f'本次需要处理{len(self.officials)}个公众号：{officialStr.rstrip(",")}，每个公众号创建{self.config["count"]}个计划')
+        self.printAndLog(f'本次需要处理{len(self.officials)}个公众号：{officialStr.rstrip(",")}，每个公众号创建{self.config["count"]}个计划')
         self.play = Play(playwright, self.config, bool(int(self.config['headless'])))
         self.play.login()
         self.play.cancleMobileAlert()
         self.startPlan()
         while self.failNum != 0:
-            self.log.info(f'~~~~~~~~~~~~~~~~ 正在重试失败的{self.failNum}个公众号 ~~~~~~~~~~~~~~~~')
+            self.printAndLog(f'~~~~~~~~~~~~~~~~ 正在重试失败的{self.failNum}个公众号 ~~~~~~~~~~~~~~~~')
             self.startPlan()
         self.play.close()
-        self.log.info('所有公众号已处理完成，程序退出')
-        self.log.info('============================================================\n')
+        self.printAndLog('所有公众号已处理完成，程序退出')
+        self.printAndLog('============================================================\n')
+    
+    def printAndLog(self, logStr):
+        """打印并存储日志"""
+        print(logStr)
+        self.log.info(logStr)
 
 
 with sync_playwright() as playwright:

@@ -36,11 +36,12 @@ def getLogFilePath():
     return 'logs/' + getTime() + '.txt'
 
 
-def logError(log_path, logging_name=''):
+def logError(log_path, logging_name='', console=False):
     """
     配置log
     :param log_path: 输出log路径
     :param logging_name: 记录中name，可随意
+    :param console: 是否在console中输出
     :return:
     """
     '''
@@ -57,12 +58,14 @@ def logError(log_path, logging_name=''):
     # formatter = logging.Formatter('[%(asctime)s] - [%(name)s] - [%(levelname)s] - %(message)s')
     formatter = logging.Formatter('[%(asctime)s] - %(message)s')
     handler.setFormatter(formatter)
-    # console相当于控制台输出，handler文件输出。获取流句柄并设置日志级别，第二层过滤
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    # 为logger对象添加句柄
     logger.addHandler(handler)
-    logger.addHandler(console)
+    
+    if console:
+        # console相当于控制台输出，handler文件输出。获取流句柄并设置日志级别，第二层过滤
+        console = logging.StreamHandler()
+        console.setLevel(logging.INFO)
+        # 为logger对象添加句柄
+        logger.addHandler(console)
     
     return logger
 
