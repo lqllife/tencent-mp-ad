@@ -425,7 +425,10 @@ class Play:
         # 素材不合规
         try:
             if self.adqPage.locator('div:has-text("提交数据不符合审核规范，请进行检查"), div:has-text("素材数据异常")').count() != 0:
-                print(f'素材不合规,重选x{retry} ', end='')
+                if retry == 1:
+                    print(f'素材不合规,重选x{retry} ', end='')
+                else:
+                    print(f'x{retry} ', end='')
                 self.adqPage.wait_for_timeout(1000)
                 self.adqPage.get_by_role('button', name='清空').click()
                 self.adqPage.get_by_role('button', name='确定').click()
