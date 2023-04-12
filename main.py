@@ -70,11 +70,11 @@ class Main:
                             self.play.reloadPge()
                         else:
                             self.play.copyPlan()
-                        print(f'耗时: {self.getTimeDiff()}s')
+                        print(f'[成功]，耗时: {self.getTimeDiff()}s')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
-                        print(f'出现错误，将在稍后重试，耗时: {self.getTimeDiff()}s')
+                        print(f'[错误，将在稍后重试]，耗时: {self.getTimeDiff()}s')
                         self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}，耗时: {self.getTimeDiff()}s')
                         self.play.closeAdqPage()
                         if i == 0:
@@ -84,8 +84,9 @@ class Main:
                         else:
                             continue
                 self.play.closeAdqPage(True)
-                if i == count - 1:
-                    self.printAndLog(f'公众号[{name}]的{count}个计划创建成功')
+                left = self.officials[name]["count"]
+                txt = '' if left == 0 else f'，剩下的{left}个计划将于稍后重试'
+                self.printAndLog(f'公众号[{name}]的{count - left}个计划创建成功' + txt)
                 officialIndex += 1
             except (TimeoutError, Error) as err:
                 officialIndex += 1
