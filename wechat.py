@@ -12,23 +12,6 @@ from utils.WxError import WxError
 from utils.tools import getNewDate, makeRandArr, makeRandStr, splitList
 
 
-def get_executable_path() -> Union[str, None]:
-    """获取playwright执行目录"""
-    parent_folder = Path(modules['playwright'].__file__).parent / 'driver' / 'package' / '.local-browsers'
-    
-    if not path.exists(parent_folder):
-        return None
-    
-    child_folders = [name for name in listdir(parent_folder) if path.isdir(parent_folder / name) and name.strip().lower().startswith('chromium')]
-    
-    if len(child_folders) != 1:
-        return None
-    
-    chromium_folder = child_folders[0]
-    
-    return parent_folder / chromium_folder / 'chrome-win' / 'chrome.exe'
-
-
 class Play:
     authPath = 'auth/auth.json'
     page = None
@@ -49,12 +32,29 @@ class Play:
             self.noViewPort = False
             args = None
         
-        self.browser = play.chromium.launch(headless=headless, args=args, slow_mo=300, executable_path=get_executable_path())
+        self.browser = play.chromium.launch(headless=headless, args=args, slow_mo=300, executable_path=self.get_executable_path())
         self.context = self.getContext()
         self.page = self.context.new_page()
         
         self.fastTest = False
         self.materialNo = 0
+    
+    @staticmethod
+    def get_executable_path() -> Union[str, None]:
+        """获取playwright执行目录"""
+        parent_folder = Path(modules['playwright'].__file__).parent / 'driver' / 'package' / '.local-browsers'
+        
+        if not path.exists(parent_folder):
+            return None
+        
+        child_folders = [name for name in listdir(parent_folder) if path.isdir(parent_folder / name) and name.strip().lower().startswith('chromium')]
+        
+        if len(child_folders) != 1:
+            return None
+        
+        chromium_folder = child_folders[0]
+        
+        return parent_folder / chromium_folder / 'chrome-win' / 'chrome.exe'
     
     def close(self):
         """关闭浏览器"""
@@ -160,6 +160,16 @@ class Play:
         except TimeoutError:
             return False
     
+    def getUploadedMaterialNum(self):
+        """获取已上传的素材数量"""
+        btnName = '我的图片' if self.isImageMaterial() else '我的视频'
+        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
+        try:
+            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').first.wait_for(timeout=20000)
+        except TimeoutError:
+            pass
+        return self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
+    
     def setMaterial(self):
         if self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.is_checked():
             self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.click()
@@ -167,28 +177,21 @@ class Play:
             self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.click()
         self.adqPage.get_by_role('button', name='图片/视频').click()
         # 随机选择图片
-        btnName = '我的图片' if self.isImageMaterial() else '我的视频'
-        self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
-        try:
-            self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').first.wait_for(timeout=20000)
-        except TimeoutError:
-            pass
         if self.materialCount == 0:
             # 没有素材时，上传素材
-            realCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
+            realCount = self.getUploadedMaterialNum()
             _, _, lists = self.getMaterialList()
             if realCount < len(lists):
                 print('需要上传素材', realCount, len(lists))
                 self.uploadMaterials()
-            self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_text(f'{btnName}').click()
-            self.materialCount = self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
+            self.materialCount = self.getUploadedMaterialNum()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
         if self.materialCount == 0:
             raise WxError('素材上传失败', 1)
         selectCount = int(self.config['material_count'])
         selectedNum = 0
         randArr = makeRandArr(self.materialCount, selectCount * 2 if self.materialCount >= selectCount * 2 else selectCount, int(self.config['material_start']))
-        print(f'素材总数：{self.materialCount}, 随机：{randArr}')
+        # print(f'素材总数：{self.materialCount}, 随机：{randArr}', end='')
         for no in randArr:
             if self.selectMaterila(no):
                 selectedNum += 1
@@ -196,6 +199,11 @@ class Play:
                     break
         self.adqPage.wait_for_load_state()
         self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
+        # 素材异常
+        # <span class="pull-right text-sm text-error">不符合审核规范 <a href="javascript:;"><span class="underline leading-none odc-text odc-text-small odc-text-danger">查看 2 个风险</span></a><i class="help-block" style="display: none;"></i></span>
+        self.adqPage.locator('.pull-right .text-sm .text-error').wait_for(timeout=5000)
+        if self.adqPage.locator('.pull-right .text-sm .text-error').count() != 0:
+            raise WxError('素材不符合审核规范')
     
     def openPlanPage(self, create=True):
         """打开新建广告页面"""
@@ -308,7 +316,7 @@ class Play:
         if dayDom.count() == 0:
             dayDom.click()
         else:
-            dayDom.nth(0).click()
+            dayDom.nth(0 if dayAfter < 20 else 1).click()
         # 出价方式
         if self.isImageMaterial():
             self.adqPage.get_by_role('button', name='oCPC').click()
