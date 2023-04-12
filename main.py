@@ -13,6 +13,7 @@ class Main:
     # 处理失败的公众号数量
     failNum = 0
     play = None
+    time = time.time()
     
     def __init__(self):
         logPath = getLogFilePath()
@@ -53,22 +54,27 @@ class Main:
             count = self.officials[name]['count']
             if count == 0:
                 continue
+            self.time = time.time()
             try:
                 print(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划')
                 self.play.choseAccount(name)
                 for i in range(count):
                     try:
                         if i == 0:
+                            print(f'公众号[{name}]，正在创建第一个计划 ')
                             self.play.openPlanPage()
                             self.play.createPlan()
                             self.play.closeAdqPage()
                             self.play.reloadMpPge()
                         else:
                             self.play.copyPlan()
-                        print(f'已完成 {i + 1}')
+                        diff = time.time() - self.time
+                        self.time = time.time()
+                        print(f'公众号: [{officialIndex}/{self.failNum}]，计划: [{i + 1}/{count}]，耗时: [{round(diff, 2)}s]')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
+                        self.time = time.time()
                         self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}')
                         self.play.closeAdqPage()
                         if i == 0:
