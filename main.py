@@ -56,11 +56,12 @@ class Main:
                 continue
             self.time = time.time()
             try:
+                print()
                 print(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划')
                 self.play.choseAccount(name)
                 for i in range(count):
+                    print(f'公众号[{name}]，正在创建第{i + 1}个计划 ', end='')
                     try:
-                        print(f'公众号[{name}]，正在创建第{i + 1}个计划 ', end='')
                         if i == 0:
                             self.play.openPlanPage()
                             self.play.createPlan()
