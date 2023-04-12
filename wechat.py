@@ -201,9 +201,12 @@ class Play:
         self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
         # 素材异常
         # <span class="pull-right text-sm text-error">不符合审核规范 <a href="javascript:;"><span class="underline leading-none odc-text odc-text-small odc-text-danger">查看 2 个风险</span></a><i class="help-block" style="display: none;"></i></span>
-        self.adqPage.locator('.pull-right .text-sm .text-error').wait_for(timeout=5000)
-        if self.adqPage.locator('.pull-right .text-sm .text-error').count() != 0:
-            raise WxError('素材不符合审核规范')
+        try:
+            self.adqPage.locator('.pull-right .text-sm .text-error').wait_for(timeout=5000)
+            if self.adqPage.locator('.pull-right .text-sm .text-error').count() != 0:
+                raise WxError('素材不符合审核规范')
+        except TimeoutError:
+            pass
     
     def openPlanPage(self, create=True):
         """打开新建广告页面"""
@@ -326,8 +329,9 @@ class Play:
         inputNo = 1
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).click()
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).fill(str(self.config['price']))
-        self.adqPage.locator('[data-hottag="Click.Function.Phoenix.CostGroup.AutoAcquisition.SwitchBtn"]').click()
+        # 一键起量
         if int(self.config['budget']) > 0:
+            self.adqPage.locator('[data-hottag="Click.Function.Phoenix.CostGroup.AutoAcquisition.SwitchBtn"]').click()
             self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).click()
             self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).fill(str(self.config['budget']))
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').click()
