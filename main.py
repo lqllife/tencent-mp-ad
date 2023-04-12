@@ -59,21 +59,22 @@ class Main:
                 print()
                 print(f'公众号[{name}][{officialIndex}/{self.failNum}]，需要创建{count}个计划')
                 self.play.choseAccount(name)
+                i = 0
                 for i in range(count):
-                    print(f'公众号[{name}]，正在创建第{i + 1}个计划 ', end='')
+                    print(f'{time.strftime("%H:%M:%S")} 第{i + 1}个计划 ', end='')
                     try:
                         if i == 0:
                             self.play.openPlanPage()
                             self.play.createPlan()
                             self.play.closeAdqPage()
-                            self.play.reloadMpPge()
+                            self.play.reloadPge()
                         else:
                             self.play.copyPlan()
-                        print(f'进度: [{officialIndex}/{self.failNum}]，计划: [{i + 1}/{count}]，耗时: [{self.getTimeDiff()}s]')
+                        print(f'耗时: {self.getTimeDiff()}s')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
-                        self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}，耗时: [{self.getTimeDiff()}s]')
+                        self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}，耗时: {self.getTimeDiff()}s')
                         self.play.closeAdqPage()
                         if i == 0:
                             self.play.openPlanPage()
@@ -82,7 +83,8 @@ class Main:
                         else:
                             continue
                 self.play.closeAdqPage(True)
-                self.log.info(f'公众号[{name}]的{count}个计划创建成功')
+                if i == count - 1:
+                    self.log.info(f'公众号[{name}]的{count}个计划创建成功')
                 officialIndex += 1
             except (TimeoutError, Error) as err:
                 officialIndex += 1

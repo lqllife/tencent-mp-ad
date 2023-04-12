@@ -70,10 +70,11 @@ class Play:
             self.mpPage.close()
             self.mpPage = None
     
-    def reloadMpPge(self):
+    def reloadPge(self, isMp=True):
         """刷新mp页面"""
-        self.mpPage.reload()
-        self.mpPage.wait_for_load_state()
+        page = self.mpPage if isMp else self.adqPage
+        page.reload()
+        page.wait_for_load_state()
     
     def getContext(self):
         """获取浏览器上下文"""
@@ -174,10 +175,6 @@ class Play:
         return self.adqPage.frame_locator('.spaui-drawer-body > iframe').locator('.figure-box').count()
     
     def setMaterial(self):
-        if self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.is_checked():
-            self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.click()
-        if self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.is_checked():
-            self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.click()
         self.adqPage.get_by_role('button', name='图片/视频').click()
         # 随机选择图片
         if self.materialCount == 0:
@@ -188,6 +185,11 @@ class Play:
                 print('需要上传素材', realCount, len(lists), end='')
                 self.uploadMaterials()
                 self.adqPage.get_by_role('button', name='图片/视频').click()
+        self.choseMaterial(False)
+    
+    def choseMaterial(self, click=True):
+        if click:
+            self.adqPage.get_by_role('button', name='图片/视频').click()
         self.materialCount = self.getUploadedMaterialNum()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
         if self.materialCount == 0:
@@ -203,14 +205,6 @@ class Play:
                     break
         self.adqPage.wait_for_load_state()
         self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
-        # 素材异常
-        # <span class="pull-right text-sm text-error">不符合审核规范 <a href="javascript:;"><span class="underline leading-none odc-text odc-text-small odc-text-danger">查看 2 个风险</span></a><i class="help-block" style="display: none;"></i></span>
-        try:
-            self.adqPage.locator('.pull-right .text-sm .text-error').wait_for(timeout=5000)
-            if self.adqPage.locator('.pull-right .text-sm .text-error').count() != 0:
-                raise WxError('素材不符合审核规范')
-        except TimeoutError:
-            pass
     
     def openPlanPage(self, create=True):
         """打开新建广告页面"""
@@ -221,10 +215,19 @@ class Play:
                 self.mpPage.get_by_role('button', name='新建广告').click()
             self.adqPage = adqPageInfo.value
     
-    def createPlan(self):
+    def createPlan(self, retry=1):
         """新建推广计划"""
+        # 重试次数超过三次则不再重试
+        if retry > 3:
+            raise WxError('创建计划页面打开失败', 1)
+        # 因为网络问题导致页面打开失败
         self.closePageButton(False)
-        self.adqPage.get_by_text('新建推广计划').click()
+        try:
+            self.adqPage.get_by_text('新建推广计划').click()
+        except TimeoutError:
+            self.reloadPge(False)
+            retry += 1
+            return self.createPlan(retry)
         self.adqPage.locator('#order_container_campaign').locator('button[data-hottag-content="unfold"]').click()
         self.adqPage.locator('#order_container_campaign').get_by_role('button', name='公众号推广').click()
         self.adqPage.locator('#order_container_campaign').get_by_role('button', name='加速投放').click()
@@ -232,8 +235,11 @@ class Play:
         self.adqPage.locator('#order_container_campaign').get_by_placeholder('请输入推广计划名称').fill('%s-%s-%s' % ('推广计划', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), makeRandStr()))
         self.publicSteps()
     
-    def copyPlan(self):
+    def copyPlan(self, retry=1):
         """复制现有计划"""
+        # 重试次数超过三次则不再重试
+        if retry > 3:
+            raise WxError('无法复制，公众号没有广告', 1)
         self.closePageButton()
         try:
             if self.mpPage.wait_for_selector(f'tr:has-text("复制")', timeout=20000).is_visible():
@@ -241,10 +247,18 @@ class Play:
                     self.mpPage.get_by_role('button', name='复制').first.click()
                 self.adqPage = mpPageInfo.value
         except TimeoutError:
-            raise WxError('无法复制，公众号没有广告', 1)
+            self.reloadPge()
+            retry += 1
+            return self.copyPlan(retry)
         self.closePageButton(False)
         self.adqPage.wait_for_load_state()
-        self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').click()
+        try:
+            # 因为网络问题导致页面打开失败
+            self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').click()
+        except TimeoutError:
+            self.reloadPge(False)
+            retry += 1
+            return self.copyPlan(retry)
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').fill('%s-%s-%s' % ('微信公众号与小程序', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), makeRandStr()))
         self.adqPage.get_by_role("button", name='清空').click()
         self.adqPage.get_by_role("button", name='确定').click()
@@ -342,6 +356,10 @@ class Play:
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').fill('%s-%s-%s' % ('微信公众号与小程序', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), makeRandStr()))
         self.adqPage.get_by_role('button', name='下一步').click()
         self.adqPage.wait_for_load_state()
+        if self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.is_checked():
+            self.adqPage.get_by_role('switch', name='自动衍生更多素材').locator('span').first.click()
+        if self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.is_checked():
+            self.adqPage.get_by_role('switch', name='自动衍生更多文案').locator('span').first.click()
         self.setMaterial()
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 3).click()
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 3).fill(self.config['title'])
@@ -390,9 +408,26 @@ class Play:
         files = os.listdir(MaterialPath)
         return MaterialPath, fileNames, files
     
-    def submit(self, close=True):
+    def submit(self, close=True, retry=1):
         """提交计划"""
+        # 重试次数达到8次则放弃提交
+        if retry > 8:
+            raise WxError('素材不合规')
         self.adqPage.get_by_role('button', name='提交').click()
+        # 素材不合规
+        try:
+            if self.adqPage.locator('div:has-text("提交数据不符合审核规范，请进行检查")').count() != 0:
+                print(f'素材不合规，重选x{retry} ', end='')
+                self.adqPage.wait_for_timeout(1000)
+                self.adqPage.get_by_role('button', name='清空').click()
+                self.adqPage.get_by_role('button', name='确定').click()
+                self.adqPage.wait_for_timeout(1500)
+                self.setMaterial()
+                retry += 1
+                self.adqPage.wait_for_timeout(1000)
+                return self.submit(close, retry)
+        except TimeoutError:
+            pass
         self.adqPage.wait_for_timeout(2000)
         self.adqPage.get_by_role('button', name='提交广告').click()
         if close:
