@@ -327,8 +327,9 @@ class Play:
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).click()
         self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo).fill(str(self.config['price']))
         self.adqPage.locator('[data-hottag="Click.Function.Phoenix.CostGroup.AutoAcquisition.SwitchBtn"]').click()
-        self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).click()
-        self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).fill(str(self.config['budget']))
+        if int(self.config['budget']) > 0:
+            self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).click()
+            self.adqPage.locator('.meta-input.spaui-input.has-normal').nth(inputNo + 1).fill(str(self.config['budget']))
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').click()
         self.adqPage.get_by_placeholder('广告名称仅用于管理广告，不会对外展示').fill('%s-%s-%s' % ('微信公众号与小程序', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), makeRandStr()))
         self.adqPage.get_by_role('button', name='下一步').click()
