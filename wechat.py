@@ -275,8 +275,7 @@ class Play:
         self.adqPage.get_by_role('button', name='原生推广页').click()
         self.adqPage.get_by_role('button', name='微信公众号详情').click()
         self.adqPage.wait_for_timeout(2000)
-        self.submit(False)
-        self.adqPage.close()
+        self.submit()
     
     def closePageButton(self, isMp=True):
         """关闭 我知道了 按钮"""
@@ -417,7 +416,7 @@ class Play:
         files = os.listdir(MaterialPath)
         return MaterialPath, fileNames, files
     
-    def submit(self, close=True, retry=1):
+    def submit(self, retry=1):
         """提交计划"""
         # 重试次数达到8次则放弃提交
         if retry > 8:
@@ -425,7 +424,7 @@ class Play:
         self.adqPage.get_by_role('button', name='提交').click()
         # 素材不合规
         try:
-            if self.adqPage.locator('div:has-text("提交数据不符合审核规范，请进行检查")').count() != 0:
+            if self.adqPage.locator('div:has-text("提交数据不符合审核规范，请进行检查"), div:has-text("素材数据异常")').count() != 0:
                 print(f'素材不合规,重选x{retry} ', end='')
                 self.adqPage.wait_for_timeout(1000)
                 self.adqPage.get_by_role('button', name='清空').click()
@@ -433,16 +432,14 @@ class Play:
                 self.adqPage.wait_for_timeout(1500)
                 self.setMaterial()
                 retry += 1
-                self.adqPage.wait_for_timeout(1000)
-                return self.submit(close, retry)
+                self.adqPage.wait_for_timeout(800 * retry)
+                return self.submit(retry)
         except TimeoutError:
             pass
         self.adqPage.wait_for_timeout(1500)
         self.adqPage.get_by_role('button', name='提交广告').click()
-        if close:
-            self.adqPage.get_by_role('button', name='关闭').click()
-        else:
-            try:
-                self.adqPage.get_by_role('button', name='关闭').wait_for(timeout=8000)
-            except TimeoutError:
-                pass
+        try:
+            self.adqPage.get_by_role('button', name='关闭').wait_for(timeout=8000)
+            self.adqPage.close()
+        except TimeoutError:
+            pass
