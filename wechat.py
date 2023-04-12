@@ -148,8 +148,11 @@ class Play:
             raise WxError(f'未找到公众号[{name}]', 1)
         
         self.materialCount = 0
+        dom = self.page.get_by_role('link', name='公众平台投放入口')
+        if dom.count() > 1:
+            dom = dom.first
         with self.page.expect_popup() as mpPageInfo:
-            self.page.get_by_role('link', name='公众平台投放入口').click()
+            dom.click()
         self.mpPage = mpPageInfo.value
     
     def selectMaterila(self, no: int) -> bool:
@@ -184,7 +187,7 @@ class Play:
             if realCount < len(lists):
                 print('需要上传素材', realCount, len(lists))
                 self.uploadMaterials()
-            self.materialCount = self.getUploadedMaterialNum()
+        self.materialCount = self.getUploadedMaterialNum()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
         if self.materialCount == 0:
             raise WxError('素材上传失败', 1)

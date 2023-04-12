@@ -60,22 +60,19 @@ class Main:
                 self.play.choseAccount(name)
                 for i in range(count):
                     try:
+                        print(f'公众号[{name}]，正在创建第{i + 1}个计划 ', end='')
                         if i == 0:
-                            print(f'公众号[{name}]，正在创建第一个计划 ')
                             self.play.openPlanPage()
                             self.play.createPlan()
                             self.play.closeAdqPage()
                             self.play.reloadMpPge()
                         else:
                             self.play.copyPlan()
-                        diff = time.time() - self.time
-                        self.time = time.time()
-                        print(f'公众号: [{officialIndex}/{self.failNum}]，计划: [{i + 1}/{count}]，耗时: [{round(diff, 2)}s]')
+                        print(f'进度: [{officialIndex}/{self.failNum}]，计划: [{i + 1}/{count}]，耗时: [{self.getTimeDiff()}s]')
                         self.officials[name]['count'] -= 1
                         time.sleep(2)
                     except (WxError, TimeoutError, Error) as err:
-                        self.time = time.time()
-                        self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}')
+                        self.log.error(f'公众号[{name}]第[{i + 1}/{count}]个计划发生错误：{err}，耗时: [{self.getTimeDiff()}s]')
                         self.play.closeAdqPage()
                         if i == 0:
                             self.play.openPlanPage()
@@ -98,6 +95,12 @@ class Main:
                     self.officials[name]['count'] = 0
                 continue
         self.checkFailOfficial()
+    
+    def getTimeDiff(self):
+        """获取时间差并更新时间"""
+        diff = time.time() - self.time
+        self.time = time.time()
+        return round(diff, 2)
     
     def checkFailOfficial(self):
         """检查处理失败的公众号数量"""
