@@ -206,9 +206,18 @@ class Play:
         self.adqPage.wait_for_load_state()
         self.adqPage.frame_locator('.spaui-drawer-body > iframe').get_by_role('button', name='确定').click()
     
-    def openPlanPage(self, create=True):
+    def openPlanPage(self, create=True, retry=1):
         """打开新建广告页面"""
-        self.mpPage.get_by_role('link', name='推广').click()
+        # 重试次数超过三次则不再重试
+        if retry > 3:
+            raise WxError('公众号详情页面打开失败', 1)
+        try:
+            self.mpPage.get_by_role('link', name='推广').click()
+        except TimeoutError:
+            self.reloadPge()
+            retry += 1
+            return self.openPlanPage(create, retry)
+        
         self.closePageButton()
         if create:
             with self.mpPage.expect_popup() as adqPageInfo:
@@ -417,7 +426,7 @@ class Play:
         # 素材不合规
         try:
             if self.adqPage.locator('div:has-text("提交数据不符合审核规范，请进行检查")').count() != 0:
-                print(f'素材不合规，重选x{retry} ', end='')
+                print(f'素材不合规,重选x{retry} ', end='')
                 self.adqPage.wait_for_timeout(1000)
                 self.adqPage.get_by_role('button', name='清空').click()
                 self.adqPage.get_by_role('button', name='确定').click()
@@ -428,7 +437,7 @@ class Play:
                 return self.submit(close, retry)
         except TimeoutError:
             pass
-        self.adqPage.wait_for_timeout(2000)
+        self.adqPage.wait_for_timeout(1500)
         self.adqPage.get_by_role('button', name='提交广告').click()
         if close:
             self.adqPage.get_by_role('button', name='关闭').click()
