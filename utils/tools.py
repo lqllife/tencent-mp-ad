@@ -1,10 +1,16 @@
 import datetime
-import random
 import logging
+import random
 
 
-def makeRandArr(length, count, start=0):
-    """生成随机字符串数组"""
+def make_rand_arr(length, count, start=0) -> list:
+    """
+    生成随机字符串数组
+    :param length: 素材的总数
+    :param count: 随机的个数
+    :param start: 偏移
+    :return: list
+    """
     arr = list()
     while len(arr) != count:
         rand = random.randint(1, length - start)
@@ -15,38 +21,45 @@ def makeRandArr(length, count, start=0):
     return arr
 
 
-def makeRandStr(length=6):
-    """生成随机字符串"""
+def make_rand_str(length=6) -> str:
+    """
+    生成随机字符串
+    :param length: 字符串长度
+    :return: str
+    """
     randList = random.sample('zyxwvutsrqponmlkjihgfedcba', length)
     return ''.join(randList)
 
 
-def splitList(arr: list, n: int):
-    """数组分片"""
+def split_list(arr: list, n: int) -> list:
+    """
+    数组分片
+    :param arr: 原始数组
+    :param n: 每片长度
+    :return: list
+    """
     return [arr[i:i + n] for i in range(0, len(arr), n)]
 
 
-def getTime():
+def get_time() -> str:
     """获取日志"""
     return datetime.datetime.now().strftime('%Y-%m-%d')
 
 
-def getLogFilePath():
+def get_log_file_path() -> str:
     """返回日志文件目录"""
-    return 'logs/' + getTime() + '.txt'
+    return 'logs/' + get_time() + '.txt'
 
 
-def logError(log_path, logging_name='', console=False):
+def log_error(log_path, logging_name='', console=False):
     """
     配置log
+    logger是日志对象，handler是流处理器，console是控制台输出（没有console也可以，将不会在控制台输出，会在日志文件中输出）
     :param log_path: 输出log路径
     :param logging_name: 记录中name，可随意
     :param console: 是否在console中输出
     :return:
     """
-    '''
-    logger是日志对象，handler是流处理器，console是控制台输出（没有console也可以，将不会在控制台输出，会在日志文件中输出）
-    '''
     # 获取logger对象,取名
     logger = logging.getLogger(logging_name)
     # 输出INFO及以上级别的信息，针对所有输出的第一层过滤
@@ -70,7 +83,7 @@ def logError(log_path, logging_name='', console=False):
     return logger
 
 
-def getNewDate():
+def get_new_date() -> list:
     """获取15天后的日期"""
     now = datetime.datetime.now()
     after = now + datetime.timedelta(days=15)

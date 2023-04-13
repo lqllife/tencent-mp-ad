@@ -1,6 +1,3 @@
-from utils.tools import logError
-
-
 class WxError(Exception):
     def __init__(self, ErrorInfo, ErrorCode=0):
         super().__init__(self)

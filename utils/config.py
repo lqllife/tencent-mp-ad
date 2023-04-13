@@ -6,7 +6,7 @@ from utils.WxError import WxError
 class Conf:
     def __init__(self, path: str):
         self.path = path
-        self.checkDir()
+        self._check_dir()
         self.conf = ConfigParser()
         self.conf.read(path, 'utf-8')
         self.rules = {
@@ -21,7 +21,7 @@ class Conf:
             'age': '年龄',
         }
     
-    def getOfficials(self):
+    def _get_officials(self):
         officialStr = self.conf.get('conf', 'officials')
         if len(officialStr) == 0:
             raise WxError('公众号名称配置错误')
@@ -37,14 +37,14 @@ class Conf:
         
         return officials
     
-    def checkConfig(self) -> dict:
+    def _check_config(self) -> dict:
         """检查配置项"""
         configs = {}
         for name in self.conf.options('conf'):
             value = self.conf.get('conf', name)
             if value == '':
                 raise WxError(self.rules[name] + '配置错误')
-            configs[name] = self.getOfficials() if name == 'officials' else value
+            configs[name] = self._get_officials() if name == 'officials' else value
         
         # 拼接公众号
         officials = {}
@@ -68,16 +68,16 @@ class Conf:
         
         return configs
     
-    def getConfigs(self):
+    def get_configs(self):
         """读取配置项"""
-        confs = self.checkConfig()
+        confs = self._check_config()
         for name in self.rules:
             if name not in confs.keys():
                 raise WxError(f'[{self.rules[name]}]配置错误')
         
         return confs
     
-    def checkDir(self):
+    def _check_dir(self):
         if not os.path.exists(self.path):
             raise WxError('配置文件不存在')
         if not os.path.exists('conf/腾讯广告已选择地域定向导出信息.txt'):
