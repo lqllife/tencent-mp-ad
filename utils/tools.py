@@ -83,8 +83,8 @@ def log_error(log_path, logging_name='', console=False):
     return logger
 
 
-def get_new_date() -> list:
+def get_new_date(days: int) -> list:
     """获取15天后的日期"""
     now = datetime.datetime.now()
-    after = now + datetime.timedelta(days=15)
+    after = now + datetime.timedelta(days=days)
     return [now.month, now.strftime('%Y-%m-%d'), after.month, after.day]

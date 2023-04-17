@@ -19,6 +19,7 @@ class Conf:
             'material_type': '素材类型',
             'position': '投放位置',
             'age': '年龄',
+            'delay_days': '延迟天数',
         }
     
     def _get_officials(self):

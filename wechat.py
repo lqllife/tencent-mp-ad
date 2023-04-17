@@ -285,7 +285,7 @@ class Wechat:
         """关闭 我知道了 按钮"""
         try:
             page = self.mpPage if is_mp else self.adqPage
-            page.get_by_role('dialog').get_by_role('button', name='我知道了').click(timeout=6000)
+            page.get_by_role('button', name='我知道了').click(timeout=6000)
         except TimeoutError:
             pass
     
@@ -333,7 +333,7 @@ class Wechat:
         self.adqPage.locator('.selection-info').nth(idx).click()
         self.adqPage.get_by_role('button', name='男').click()
         # 选择投放日期
-        [monthNow, now, monthAfter, dayAfter] = get_new_date()
+        [monthNow, now, monthAfter, dayAfter] = get_new_date(int(self.config['delay_days']))
         self.adqPage.get_by_text(f'开始日期{now}').click()
         if monthNow != monthAfter:
             self.adqPage.locator(".roll > svg").click()
