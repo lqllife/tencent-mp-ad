@@ -191,12 +191,9 @@ class Wechat:
             if realCount < len(lists):
                 print('需要上传素材', realCount, len(lists), end='')
                 self._upload_materials()
-                self.adqPage.get_by_role('button', name='图片/视频').click()
-        self._chose_material(False)
+        self._chose_material()
     
-    def _chose_material(self, click=True):
-        if click:
-            self.adqPage.get_by_role('button', name='图片/视频').click()
+    def _chose_material(self):
         self.materialCount = self._get_uploaded_material_num()
         # 为了防止随机选择时会出错，随机生成的数组是预选数组的一倍
         if self.materialCount == 0:
