@@ -21,4 +21,5 @@ pyinstaller -F -n wechat --add-data $dataPath -i "../wechat.ico" --specpath pack
 Copy-Item 'conf' -Recurse 'pack/dist/conf'
 New-Item -ItemType Directory 'pack/dist/auth'
 New-Item -ItemType Directory 'pack/dist/logs'
-Copy-Item 'README.pdf' 'pack/dist/使用说明.pdf'
+# 将docs.md手动转成docs.pdf文件
+# Copy-Item 'docs.pdf' 'pack/dist/使用说明.pdf'
