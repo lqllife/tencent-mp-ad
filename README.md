@@ -1,8 +1,23 @@
-项目是基于`playwright`开发，用于自动提交腾讯mp广告，非adq广告。
+项目是基于`playwright`开发，用于自动提交[腾讯广告](https://e.qq.com/ads/)，适用于腾讯mp广告，非adq广告。
 
 项目为公司自用且自身技术能力有限，虽基本流程是能走通，但仍有很多不规范、妥协和逻辑不完整的地方。
 
 此项目公司已停用，所以我基本上将不再维护，您可以根据自己的需求二次开发。
+
+## 使用说明
+1. 将项目克隆到本地
+2. 使用pycharm创建`VirtualEnv`，项目根目录下的env文件夹便是由此创建
+3. 安装依赖，[安装playwright](https://playwright.dev/python/docs/intro)
+4. 运行主程序`main.py`即可
+
+## 辅助工具
+1. [codegen](https://playwright.dev/python/docs/codegen-intro)：生成代码工具，使用pycharm的终端，执行`playwright codegen --load-storage=auth/auth.json https://e.qq.com/ads/` ，工具会自动记录每一步的操作，便于开发
+2. 快速测试脚本：在`fast_test.py`的24行替换成要测试的公众号ID，然后运行此文件即可，运行前需要先登录
+
+## 辅助脚本
+1. 打包：使用pycharm的终端，在项目根目录下执行`.\cmd\pack.ps1`，打包后生成的文件在`pack/dist`中
+2. 清理：使用pycharm的终端，在项目根目录下执行`.\cmd\clean.ps1`，可以彻底清除打包后生成的文件和`__pycache__`文件夹
+3. 部署：`.\cmd\deply.ps1`用于将打包后生成的exe文件快速覆盖到各子项目，详情查看脚本说明
 
 ## 目录结构
 ```
