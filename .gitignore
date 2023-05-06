@@ -9,4 +9,4 @@ conf/images/*
 conf/videos/*
 
 test.py
-README.pdf
+*.pdf
